@@ -1,2 +1,2 @@
-# MODSIM_IBIO
-Introduction to mathematical models mostly in infectious diseases.
+# Modeling
+This repo contains mostly programming examples of modeling.

@@ -64,7 +64,6 @@ def model(N, y=None):
     # measured populations (in log scale)
     numpyro.sample("y", dist.Normal(jnp.log(z), sigma), obs=y)
 
-
 import pandas as pd
 device = 'cpu'
 numpyro.set_platform(device)
@@ -103,8 +102,6 @@ plt.fill_between(year, pi[0, :, 1], pi[1, :, 1], color="b", alpha=0.3)
 plt.gca().set(ylim=(0, 160), xlabel="year", ylabel="population (in thousands)")
 plt.title("Posterior predictive (80% CI) with predator-prey pattern.")
 plt.legend()
-
-plt.savefig("ode_plot.pdf")
 plt.tight_layout()
 
 

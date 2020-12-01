@@ -49,7 +49,7 @@ def model(N, y=None):
     :param numpy.ndarray y: measured populations with shape (N, 2)
     """
     # initial population
-    z_init = numpyro.sample("z_init", dist.LogNormal(jnp.log(10), 1), sample_shape=(2,))
+    z_init = numpyro.sample("z_init", dist.Uniform(10000, 40000), sample_shape=(2,))
     # measurement times
     ts = jnp.arange(float(N))
     # parameters alpha, beta, gamma, delta of dz_dt
@@ -65,45 +65,46 @@ def model(N, y=None):
     numpyro.sample("y", dist.Normal(jnp.log(z), sigma), obs=y)
 
 
-def main(args):
-    _, fetch = load_dataset(LYNXHARE, shuffle=False)
-    year, data = fetch()  # data is in hare -> lynx order
+import pandas as pd
+device = 'cpu'
+numpyro.set_platform(device)
 
-    # use dense_mass for better mixing rate
-    mcmc = MCMC(NUTS(model, dense_mass=True),
-                args.num_warmup, args.num_samples, num_chains=args.num_chains,
-                progress_bar=False if "NUMPYRO_SPHINXBUILD" in os.environ else True)
-    mcmc.run(PRNGKey(1), N=data.shape[0], y=jnp.log(data))
-    mcmc.print_summary()
+_, fetch = load_dataset(LYNXHARE, shuffle=False)
 
-    # predict populations
-    y_pred = Predictive(model, mcmc.get_samples())(PRNGKey(2), data.shape[0])["y"]
-    pop_pred = jnp.exp(y_pred)
-    mu, pi = jnp.mean(pop_pred, 0), jnp.percentile(pop_pred, (10, 90), 0)
-    plt.plot(year, data[:, 0], "ko", mfc="none", ms=4, label="true hare", alpha=0.67)
-    plt.plot(year, data[:, 1], "bx", label="true lynx")
-    plt.plot(year, mu[:, 0], "k-.", label="pred hare", lw=1, alpha=0.67)
-    plt.plot(year, mu[:, 1], "b--", label="pred lynx")
-    plt.fill_between(year, pi[0, :, 0], pi[1, :, 0], color="k", alpha=0.2)
-    plt.fill_between(year, pi[0, :, 1], pi[1, :, 1], color="b", alpha=0.3)
-    plt.gca().set(ylim=(0, 160), xlabel="year", ylabel="population (in thousands)")
-    plt.title("Posterior predictive (80% CI) with predator-prey pattern.")
-    plt.legend()
+num_warmup  = 1000
+num_chains  = 1
+num_samples = 1000
+numpyro.set_host_device_count(num_chains)
 
-    plt.savefig("ode_plot.pdf")
-    plt.tight_layout()
+year, data = fetch()  # data is in hare -> lynx order
+
+df_data = pd.DataFrame(columns = ['hare', 'lynx'])
+df_data['hare']=data[:,0]
+df_data['lynx']=data[:,1]
+
+df_data.index = year
+# use dense_mass for better mixing rate
+mcmc = MCMC(NUTS(model, dense_mass=True),
+            num_warmup, num_samples, num_chains=num_chains,
+            progress_bar=False if "NUMPYRO_SPHINXBUILD" in os.environ else True)
+mcmc.run(PRNGKey(1), N=data.shape[0], y=jnp.log(data))
+mcmc.print_summary()
+
+# predict populations
+y_pred = Predictive(model, mcmc.get_samples())(PRNGKey(2), data.shape[0])["y"]
+pop_pred = jnp.exp(y_pred)
+mu, pi = jnp.mean(pop_pred, 0), jnp.percentile(pop_pred, (10, 90), 0)
+plt.plot(year, data[:, 0], "ko", mfc="none", ms=4, label="true hare", alpha=0.67)
+plt.plot(year, data[:, 1], "bx", label="true lynx")
+plt.plot(year, mu[:, 0], "k-.", label="pred hare", lw=1, alpha=0.67)
+plt.plot(year, mu[:, 1], "b--", label="pred lynx")
+plt.fill_between(year, pi[0, :, 0], pi[1, :, 0], color="k", alpha=0.2)
+plt.fill_between(year, pi[0, :, 1], pi[1, :, 1], color="b", alpha=0.3)
+plt.gca().set(ylim=(0, 160), xlabel="year", ylabel="population (in thousands)")
+plt.title("Posterior predictive (80% CI) with predator-prey pattern.")
+plt.legend()
+
+plt.savefig("ode_plot.pdf")
+plt.tight_layout()
 
 
-if __name__ == '__main__':
-    assert numpyro.__version__.startswith('0.4.1')
-    parser = argparse.ArgumentParser(description='Predator-Prey Model')
-    parser.add_argument('-n', '--num-samples', nargs='?', default=1000, type=int)
-    parser.add_argument('--num-warmup', nargs='?', default=1000, type=int)
-    parser.add_argument("--num-chains", nargs='?', default=1, type=int)
-    parser.add_argument('--device', default='cpu', type=str, help='use "cpu" or "gpu".')
-    args = parser.parse_args()
-
-    numpyro.set_platform(args.device)
-    numpyro.set_host_device_count(args.num_chains)
-
-    main(args)

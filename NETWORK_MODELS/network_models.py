@@ -1,4 +1,4 @@
-import jax.numpy as np
+import numpy as np
 import pandas as pd
 import random
 
@@ -12,6 +12,7 @@ def sir_network(graph, num_nodes, t_sim, infection_probability=0.3, recovery_per
 
     # State vector # (0 susceptible, 1 infected, 2 recovered)
     S = np.zeros((t_sim,num_nodes))
+
     idx_init = list(np.random.randint(0, num_nodes, num_infected_init))
 
     S[0,idx_init]  = 1; # Seed the initial infected
@@ -34,7 +35,7 @@ def sir_network(graph, num_nodes, t_sim, infection_probability=0.3, recovery_per
             # check if infected
             if S[t-1, ni]==1:
                 # Two cases: (A) Recover or (B) infect neighbors
-                if random.random() < Pr or S[:,ni].sum()>=int(1/Pr):
+                if random.random() < Pr: #or S[:,ni].sum()>=int(1/Pr):
                     recovered.append( ni )
                 else:
                     infected.append( ni )
@@ -44,8 +45,10 @@ def sir_network(graph, num_nodes, t_sim, infection_probability=0.3, recovery_per
                     # Check if neighbor is susceptible and infect it
                     if S[t-1, nn] == 0 and random.random() < Pi:
                             infected.append( nn )
+        infected  = list(np.unique(infected))
+        recovered = list(np.unique(recovered))
 
-        susceptibles_time.append(susceptibles_time[t-1]-len(infected)-len(recovered))
+        susceptibles_time.append(num_nodes-len(infected)-len(recovered))
         infected_time.append(len(infected))
         recovered_time.append(len(recovered))
 
@@ -72,7 +75,7 @@ def seir_network(graph, num_nodes, t_sim, infection_probability=0.3, incubation_
     Pr = 1/recovery_period      # gamma (1/7 days) (recovery time)
 
     if not num_infected_init:
-        num_infected_init = int(num_nodes/100)
+        num_infected_init = round(num_nodes/100)+1
 
     # State vector # (0 susceptible, 1 exposed, 2 infected, 3 recovered)
     S = np.zeros((t_sim,num_nodes))
@@ -93,38 +96,43 @@ def seir_network(graph, num_nodes, t_sim, infection_probability=0.3, incubation_
         exposed   = []
         infected  = []
         recovered = []
+
         for ni, node_i  in enumerate( graph.nodes ):
             # check if already recovered:
             if S[t-1, ni]==3:
                 recovered.append( ni )
 
             # check if exposed
-            if S[t-1, ni]==1 and random.random() < Pi or S[t, ni].sum()>=1/Pi:
+            if S[t-1, ni]==1 and random.random() < Pi: #or S[t-int(1/Pi):t-1, ni].sum()>=1/Pi:
                 infected.append( ni )
-            else:
+            elif S[t-1, ni]==1:
                 exposed.append( ni )
 
-            # check if infected 
+            # check if infected
             if S[t-1, ni]==2:
                 # Two cases: (A) Recover or (B) infect neighbors
-                if random.random() < Pr or S[:,ni].sum()/2>=int(1/Pr):
+                if random.random() < Pr:# or S[t-int(1/Pr)-1:t+1, ni].sum() /2>=1/Pr:
                     recovered.append( ni )
                 else:
                     infected.append( ni )
 
                 # Loop over neighbors
                 for nn in  graph.neighbors( node_i ):
-                    # Check if neighbor is susceptible and infect it 
+                    # Check if neighbor is susceptible and infect it
                     if S[t-1, nn] == 0 and random.random() < Pe:
                             exposed.append( nn )
 
-        susceptibles_time.append(susceptibles_time[t-1]-len(infected)-len(recovered))
+        exposed   = list(np.unique(exposed))
+        infected  = list(np.unique(infected))
+        recovered = list(np.unique(recovered))
+
+        susceptibles_time.append(num_nodes-len(exposed)-len(infected)-len(recovered))
         exposed_time.append(len(exposed))
         infected_time.append(len(infected))
         recovered_time.append(len(recovered))
 
         # Update graph state
-        S[t, exposed]   = 1 
+        S[t, exposed]   = 1
         S[t, infected]  = 2
         S[t, recovered] = 3
 

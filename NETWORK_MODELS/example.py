@@ -20,32 +20,27 @@ def run_simulation(graph, model, num_sims=10, t_sim=300):
     return (df_all, df_graph)
 
 
-
 graph = nx.scale_free_graph(500).to_undirected()
 
 (df_dynamics_sir, df_graph_sir) = run_simulation(graph, sir_network, num_sims=10, t_sim=100)
 (df_dynamics_seir, df_graph_seir) = run_simulation(graph, seir_network, num_sims=10, t_sim=100)
 
-df_all_m = df_all_SIR.copy().reset_index()
-df_all_m = df_all_m.groupby(['index']).mean()
 
 
-ax = df_all_m.plot(y='I')
-df_all_m.plot(ax=ax, y='R')
-
-
-
-
-graph = nx.scale_free_graph(500).to_undirected()
+fig, ax = plt.subplots(1,2, figsize=(15.5, 8))
 pos = nx.spring_layout(graph, iterations=100) #,prog='twopi',args='')
-nx.draw( G=graph, pos=pos,
+nx.draw(ax = ax[0], G=graph, pos=pos,
         node_size=5,
         node_color= 'black',#'#e35340',
         edge_color='gray',
         width=.05,
         edge_cmap=plt.cm.Blues, with_labels=False)
-plt.show()
 
 
 
-plt.show()
+df_sim1 = df_dynamics_sir.copy().reset_index()
+df_sim1 = df_sim1.groupby(['index']).median()
+
+
+ax = df_sim1.plot(y='I')
+df_sim1.plot(ax=ax, y='R')

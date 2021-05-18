@@ -7,10 +7,6 @@ This repo contains mostly programming examples of modeling.
   - Markov Chain Monte Carlo - Lotka Volterra Model [(MCMC)](https://github.com/ChaosDonkey06/ID_Modeling/tree/master/MCMC)
   - [Network Models](https://github.com/ChaosDonkey06/ID_Modeling/tree/master/NETWORK_MODELS)
 
-## Contact
-
-Pull requests can be submitted directly. Other correspondence should be sent to je.cascante10@uniandes.edu.co
-
 ## License for code
 
 All code in this repository is Copyright © 2020.
